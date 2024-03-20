@@ -417,4 +417,22 @@ mod tests {
     let parsed = parsed.to_token_stream();
     assert_eq!(parsed.to_string(), expected_output.to_string());
   }
+
+  #[test]
+  /// Test that the config file parser correctly reads the config file
+  /// when the value also has a required library
+  fn test_full_parse7() {
+    let expected_output = quote! {
+      MyDriver < DebugLibSpecial, AdvLibSpecial < WriteLibSpecial, DebugLibSpecial > >
+    };
+
+    let input = quote! {
+      MyDriver<DebugLib, AdvLib>;
+      Config = "tests/data/test_config.toml";
+    };
+
+    let parsed = syn::parse2::<Component>(input).unwrap();
+    let parsed = parsed.to_token_stream();
+    assert_eq!(parsed.to_string(), expected_output.to_string());
+  }
 }

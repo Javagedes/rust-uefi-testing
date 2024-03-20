@@ -1,2 +1,4 @@
 [libraries]
+AdvLib="AdvLibSpecial<WriteLib, DebugLib>"
 WriteLib="WriteLibSpecial"
+DebugLib="DebugLibSpecial"
