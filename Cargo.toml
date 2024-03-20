@@ -1,0 +1,28 @@
+[workspace]
+resolver = "2"
+
+members = [
+    "RustPlatformPkg",
+    "RustPkg1",
+    "RustPkg2",
+]
+
+[workspace.dependencies]
+uefi_core = { path = "uefi_core" }
+uefi_macro = { path = "uefi_macro" }
+RustPkg1 = { path = "RustPkg1" }
+RustPkg2 = { path = "RustPkg2" }
+RustBootServicesAllocatorDxe = { path = "RustBootServicesAllocatorDxe" }
+
+r-efi = "4.3.0"
+log = { version = "0.4.21", default-features = false }
+lazy_static = { version = "1.0.0", features = ["spin_no_std"] }
+spin = "0.5.2"
+uart_16550 = "0.2.0"
+x86_64 = "0.14.2"
+
+[profile.dev]
+opt-level = 3
+
+[profile.test]
+opt-level = 0

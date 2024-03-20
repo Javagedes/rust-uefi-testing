@@ -1,0 +1,23 @@
+[package]
+name = "RustPlatformPkg"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "hello_world_print"
+path = "bin/hello_world_print.rs"
+
+[[bin]]
+name = "hello_world_buf"
+path = "bin/hello_world_buf.rs"
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+r-efi = { workspace = true}
+RustPkg1 = { workspace = true }
+RustPkg2 = { workspace = true}
+uefi_core = { workspace = true }
+RustBootServicesAllocatorDxe = { workspace = true }
+
+[libraries]
+DebugLib = "RingBufferDebugLib"
