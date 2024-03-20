@@ -17,3 +17,7 @@ This crate contains a library implementation for DebugLib
 ## RustPlatformPkg
 
 This crate contains component implementations in the bin/* folder. i.e. they get compiled into binaries, and are where you specify which library implementations you want to use. 
+
+## RustBootServicesAllocatorDxe
+
+A clone of https://github.com/microsoft/mu_plus/tree/release/202311/MsCorePkg/Crates/RustBootServicesAllocatorDxe
