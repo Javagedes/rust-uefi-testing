@@ -12,7 +12,9 @@ uefi_core = { path = "uefi_core" }
 uefi_macro = { path = "uefi_macro" }
 RustPkg1 = { path = "RustPkg1" }
 RustPkg2 = { path = "RustPkg2" }
-RustBootServicesAllocatorDxe = { path = "RustBootServicesAllocatorDxe" }
+
+# Custom libraries
+RustBootServicesAllocatorDxe = { path = "Library/RustBootServicesAllocatorDxe" }
 
 r-efi = "4.3.0"
 log = { version = "0.4.21", default-features = false }

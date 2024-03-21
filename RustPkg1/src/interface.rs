@@ -4,3 +4,7 @@ use r_efi::efi::{Handle, SystemTable};
 pub trait DebugLib {
     fn init(image_handle: Handle, system_table: *mut SystemTable);
 }
+
+pub trait CpuInterrupt {
+    fn init();
+}

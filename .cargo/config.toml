@@ -1,9 +1,7 @@
-[build]
-target = "x86_64-pc-windows-msvc"
-
 [net]
 git-fetch-with-cli = true
 
-# [unstable]
-# build-std-features = ["compiler-builtins-mem"]
-# build-std = ["core", "compiler_builtins", "alloc"]
+[alias]
+build-std = "build --features std --target x86_64-pc-windows-msvc"
+build-uefi = "build --features uefi --target x86_64-unknown-uefi -Zbuild-std=core,compiler_builtins,alloc -Zbuild-std-features=compiler-builtins-mem"
+run-std = "run --features std"
