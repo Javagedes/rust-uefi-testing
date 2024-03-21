@@ -9,3 +9,7 @@ edition = "2021"
 RustBootServicesAllocatorDxe = { workspace = true }
 r-efi = { workspace = true }
 uefi_macro = { workspace = true }
+
+[features]
+default = []
+std = []

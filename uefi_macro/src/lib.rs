@@ -5,12 +5,13 @@ use toml::Table;
 
 use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
-use syn::{Ident, token::Comma, punctuated::Punctuated, Token};
+use syn::{punctuated::Punctuated, token::Comma, Ident, Token};
 
 mod kw {
   syn::custom_keyword!(config);
   syn::custom_keyword!(Config);
 }
+
 #[proc_macro]
 pub fn component(tokens: TokenStream) -> TokenStream {
     let component = match syn::parse::<Component>(tokens) {
@@ -126,6 +127,7 @@ impl DefaultMap {
     DefaultMap{0: map}
   }
 }
+
 impl syn::parse::Parse for DefaultMap {
   fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
     input.parse::<Ident>()?;
@@ -135,12 +137,20 @@ impl syn::parse::Parse for DefaultMap {
     Ok(DefaultMap::from_str(&path.value()))
   }
 }
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Clone)]
 struct Library {
   name: Ident,
-  instance: Ident,
+  instance: syn::PatPath,
   required: Vec<Ident>,
   resolved: Vec<Library>,
+}
+
+impl PartialEq for Library {
+  fn eq(&self, other: &Self) -> bool {
+    self.name == other.name
+      && self.required == other.required
+      && self.resolved == other.resolved
+  }
 }
 
 impl Library {
@@ -167,7 +177,7 @@ impl syn::parse::Parse for Library {
   fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
     let name: syn::Ident = input.parse()?;
     input.parse::<Token![=]>()?;
-    let instance: syn::Ident = input.parse()?;
+    let instance = input.parse::<syn::PatPath>()?;
     
     // The Library itself has no required libraries
     if input.is_empty() || input.peek(Token![;]) {
@@ -207,6 +217,16 @@ impl quote::ToTokens for Library {
       quote! {#instance<#(#required),*>}
     };
     tokens.extend(t_tokens);
+  }
+}
+
+impl std::fmt::Debug for Library {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    let instance = self.instance.to_token_stream().to_string();
+    write!(
+      f, "Library {{ name: {}, instance: {}, required: {:?}, resolved: {:?} }}",
+      self.name, instance, self.required, self.resolved
+    )
   }
 }
 
@@ -279,7 +299,7 @@ mod tests {
   #[test]
   fn test_library_parse4() {
     let input = quote! {
-      DebugLib=DebugLibBase<PrintLibBase, WriteLibBase>
+      DebugLib=DebugLibBase<PrintLib, WriteLib>
     };
     let expected = quote!(DebugLibBase<PrintLibBase<WriteLibBase>, WriteLibBase>);
     let mut parsed = syn::parse2::<Library>(input).unwrap();
@@ -298,6 +318,38 @@ mod tests {
       Library {
         name: parse_quote!(WriteLib),
         instance: parse_quote!(WriteLibBase),
+        required: vec![],
+        resolved: vec![]
+      }
+    ];
+    let parsed: proc_macro2::TokenStream = parsed.to_token_stream();
+    assert_eq!(parsed.to_string(), expected.to_string());
+  }
+
+  #[test]
+  fn test_library_parse5() {
+    let input = quote! {
+      DebugLib=pkg1::library::DebugLibBase<PrintLib, WriteLib>
+    };
+    let expected = quote!(
+      pkg1::library::DebugLibBase<pkg1::library::PrintLibBase<pkg1::library::WriteLibBase>, pkg1::library::WriteLibBase>
+    );
+    let mut parsed = syn::parse2::<Library>(input).unwrap();
+    parsed.resolved = vec![
+      Library {
+        name: parse_quote!(PrintLib),
+        instance: parse_quote!(pkg1::library::PrintLibBase),
+        required: vec![parse_quote!(WriteLib)],
+        resolved: vec![Library {
+          name: parse_quote!(WriteLib),
+          instance: parse_quote!(pkg1::library::WriteLibBase),
+          required: vec![],
+          resolved: vec![]
+        }]
+      },
+      Library {
+        name: parse_quote!(WriteLib),
+        instance: parse_quote!(pkg1::library::WriteLibBase),
         required: vec![],
         resolved: vec![]
       }
@@ -429,6 +481,26 @@ mod tests {
     let input = quote! {
       MyDriver<DebugLib, AdvLib>;
       Config = "tests/data/test_config.toml";
+    };
+
+    let parsed = syn::parse2::<Component>(input).unwrap();
+    let parsed = parsed.to_token_stream();
+    assert_eq!(parsed.to_string(), expected_output.to_string());
+  }
+
+  
+  #[test]
+  /// Test that the config file parser can properly handle include paths
+  fn test_full_parse8() {
+    let expected_output = quote! {
+      MyDriver < pk1::library::DebugLibBase, pk1::library::AdvLibSpecial < pk2::library::WriteLibBase, pk1::library::DebugLibBase > >
+    };
+
+    let input = quote! {
+      MyDriver<DebugLib, AdvLib>;
+      DebugLib=pk1::library::DebugLibBase;
+      AdvLib=pk1::library::AdvLibSpecial < WriteLib, DebugLib >;
+      WriteLib=pk2::library::WriteLibBase; 
     };
 
     let parsed = syn::parse2::<Component>(input).unwrap();
