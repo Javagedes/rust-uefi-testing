@@ -2,16 +2,15 @@
 resolver = "2"
 
 members = [
-    "RustPlatformPkg",
-    "RustPkg1",
-    "RustPkg2",
+    "Package/*",
+    "Platform/RustPlatformPkg",
 ]
 
 [workspace.dependencies]
 uefi_core = { path = "uefi_core" }
 uefi_macro = { path = "uefi_macro" }
-RustPkg1 = { path = "RustPkg1" }
-RustPkg2 = { path = "RustPkg2" }
+RustPkg1 = { path = "Package/RustPkg1" }
+RustPkg2 = { path = "Package/RustPkg2" }
 
 # Custom libraries
 RustBootServicesAllocatorDxe = { path = "Library/RustBootServicesAllocatorDxe" }
