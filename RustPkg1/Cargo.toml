@@ -16,3 +16,7 @@ lazy_static = { workspace = true }
 spin = { workspace = true }
 uart_16550 = { workspace = true }
 x86_64 = { workspace = true }
+
+[features]
+default = []
+std = ["uefi_core/std"]

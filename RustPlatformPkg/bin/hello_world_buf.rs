@@ -6,7 +6,6 @@ use core::panic::PanicInfo;
 use r_efi::efi;
 
 use pkg1::component::HelloWorldComponent;
-use pkg2::library::ring_log::RingBufferDebugLib;
 
 use uefi_core::{Component, component};
 
@@ -17,9 +16,9 @@ fn panic(_info: &PanicInfo) -> ! {
 
 type Driver = component!(
     HelloWorldComponent<DebugLib>;
-    DebugLib=RingBufferDebugLib;
+    DebugLib=pkg2::library::RingBufferDebugLib;
 );
-//type Driver = HelloWorldComponent<RingBufferDebugLib>;
+
 
 #[no_mangle]
 pub extern "efiapi" fn efi_main(

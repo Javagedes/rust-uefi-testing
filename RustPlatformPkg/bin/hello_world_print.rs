@@ -6,7 +6,6 @@ use core::panic::PanicInfo;
 use r_efi::efi;
 
 use pkg1::component::HelloWorldComponent;
-use pkg1::library::debug_lib:: DebugLibBase;
 
 use uefi_core::{Component, component};
 
@@ -15,8 +14,11 @@ fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
-type Driver = component!(HelloWorldComponent<DebugLib>; DebugLib=DebugLibBase);
-//type Driver = HelloWorldComponent<DebugLibBase>;
+type Driver = component!(
+    HelloWorldComponent<DebugLib>;
+    DebugLib=pkg1::library::DebugLibBase
+);
+
 
 #[no_mangle]
 pub extern "efiapi" fn efi_main(

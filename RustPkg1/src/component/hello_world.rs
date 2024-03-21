@@ -3,7 +3,7 @@ use log::info;
 use r_efi::efi;
 
 use uefi_core::{Component, error::Result};
-use crate::library::debug_lib::DebugLib;
+use crate::interface::DebugLib;
 
 pub struct HelloWorldComponent<D>
 where

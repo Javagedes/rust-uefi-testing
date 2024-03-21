@@ -1,7 +1,7 @@
-use pkg1::library::debug_lib::DebugLib;
+use pkg1::interface::DebugLib;
 use r_efi::efi;
 use alloc::format;
-use log::Log;
+use log;
 use lazy_static::lazy_static;
 use spin::Mutex;
 use uart_16550::SerialPort;
@@ -17,14 +17,14 @@ lazy_static! {
 }
 
 static LOGGER: RingBufferDebugLib = RingBufferDebugLib::new();
-pub struct RingBuffer<const N: usize> {
+struct RingBuffer<const N: usize> {
     buffer: [u8; N],
     read_index: usize,
     write_index: usize,
 }
 
 impl<const N: usize> RingBuffer<N> {
-    pub const fn new() -> Self {
+    const fn new() -> Self {
         RingBuffer {
             buffer: [0; N],
             read_index: 0,
@@ -32,12 +32,12 @@ impl<const N: usize> RingBuffer<N> {
         }
     }
 
-    pub fn write(&mut self, data: u8) {
+    fn write(&mut self, data: u8) {
         self.buffer[self.write_index] = data;
         self.write_index = (self.write_index + 1) % N;
     }
 
-    pub fn read(&mut self) -> u8 {
+    fn read(&mut self) -> u8 {
         let data = self.buffer[self.read_index];
         self.read_index = (self.read_index + 1) % N;
         data
@@ -51,7 +51,7 @@ pub struct RingBufferDebugLib {
 
 
 impl RingBufferDebugLib {
-    pub const fn new() -> Self {
+    const fn new() -> Self {
         RingBufferDebugLib {
             buffer: Mutex::new(RingBuffer::new()),
         }
@@ -65,7 +65,7 @@ impl DebugLib for RingBufferDebugLib {
     }
 }
 
-impl Log for RingBufferDebugLib {
+impl log::Log for RingBufferDebugLib {
     fn enabled(&self, _metadata: &log::Metadata) -> bool {
         true
     }

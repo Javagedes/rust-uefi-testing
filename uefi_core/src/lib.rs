@@ -20,6 +20,7 @@ pub trait Component {
         image_handle: efi::Handle,
         system_table: *mut efi::SystemTable,
     ) -> error::Result<()> {
+        #[cfg(not(feature = "std"))]
         rust_boot_services_allocator_dxe::GLOBAL_ALLOCATOR.init(unsafe { (*system_table).boot_services });
         
         Self::init(image_handle, system_table)?;

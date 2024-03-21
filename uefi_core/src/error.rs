@@ -2,6 +2,7 @@ pub type Result<T> = core::result::Result<T, EfiError>;
 
 use r_efi::efi;
 // TODO: Handle difference between warning and error
+#[derive(Debug)]
 pub enum EfiError {
     LoadError,
     InvalidParameter,

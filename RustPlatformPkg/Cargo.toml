@@ -12,6 +12,10 @@ name = "hello_world_buf"
 path = "bin/hello_world_buf.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[[bin]]
+name = "hello_world_std"
+path = "bin/hello_world_std.rs"
+
 [dependencies]
 r-efi = { workspace = true}
 RustPkg1 = { workspace = true }
@@ -19,5 +23,6 @@ RustPkg2 = { workspace = true}
 uefi_core = { workspace = true }
 RustBootServicesAllocatorDxe = { workspace = true }
 
-[libraries]
-DebugLib = "RingBufferDebugLib"
+[features]
+default = []
+std = ["uefi_core/std", "RustPkg1/std", "RustPkg2/std"]
