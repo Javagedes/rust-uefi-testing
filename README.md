@@ -169,14 +169,18 @@ being as this is a toml config file, there are plenty of possibilities to add ad
 
 Below are the list of crates and their purpose / contents.
 
-### uefi_core
+### mu_core
 
 This crate provides the trait definition for a Component, and a error enum for converting between
 the typical rust error handling (with "?"s) and UEFI error handling (returning EFI_X)
 
-### uefi_macro
+### mu_macro
 
 This crate provides the component!() macro for generating the type definition for a component.
+
+### mu_config
+
+This crate provides an interface for parsing the config file for specifying dependencies.
 
 ### Package/RustPkg1
 
