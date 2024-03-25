@@ -9,6 +9,7 @@ proc-macro = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+mu_config = { workspace = true }
 syn = { version = "2.0.53", features = ["full"] }
 quote = "1.0.35"
 proc-macro2 = "1.0.79"

@@ -51,14 +51,13 @@ impl syn::parse::Parse for FromPath {
     .map_err(
         |e| syn::Error::new(path.span(), e)
     )?;
-    let table: Table = toml::from_str(&toml_content).unwrap();
-    if let Some(library_table) = table.get("libraries"){ 
-      if let Some(libraries) = library_table.as_table() {
-        for (key, value) in libraries {
-          let value = value.as_str().unwrap();
-          let lib = syn::parse_str::<Library>(&format!("{}={}", key, value)).unwrap();
-          map.insert(key.to_string(), lib);
-        }
+    let config: mu_config::Config = toml::from_str(&toml_content).unwrap();
+    
+    for ((name, arch), instance) in config.libraries.instances {
+      // TODO, Find the specified architecture for the component
+      if arch == "common" {
+        let lib = syn::parse_str::<Library>(&format!("{}={}", name, instance.path)).unwrap();
+        map.insert(name, lib);
       }
     }
     Ok(FromPath(map))
@@ -91,14 +90,12 @@ impl syn::parse::Parse for FromEnv {
     .map_err(
         |e| syn::Error::new(env.span(), e)
     )?;
-    let table: Table = toml::from_str(&toml_content).unwrap();
-    if let Some(library_table) = table.get("libraries"){ 
-      if let Some(libraries) = library_table.as_table() {
-        for (key, value) in libraries {
-          let value = value.as_str().unwrap();
-          let lib = syn::parse_str::<Library>(&format!("{}={}", key, value)).unwrap();
-          map.insert(key.to_string(), lib);
-        }
+    let config: mu_config::Config = toml::from_str(&toml_content).unwrap();
+    for ((name, arch), instance) in config.libraries.instances {
+      // TODO, Find the specified architecture for the component
+      if arch == "common" {
+        let lib = syn::parse_str::<Library>(&format!("{}={}", name, instance.path)).unwrap();
+        map.insert(name, lib);
       }
     }
     Ok(FromEnv(map))
