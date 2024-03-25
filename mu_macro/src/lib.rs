@@ -1,51 +1,82 @@
 extern crate proc_macro;
 
 use std::collections::HashMap;
-use toml::Table;
+
 
 use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
 use syn::{punctuated::Punctuated, token::Comma, Ident, Token};
 
-mod kw {
-  syn::custom_keyword!(config);
-  syn::custom_keyword!(Config);
-}
+mod map;
+
+type FullyDescribed = TokenParser<map::FromMacro>;
+type PathDescribed = TokenParser<map::FromPath>;
+type EnvDescribed = TokenParser<map::FromEnv>;
 
 #[proc_macro]
 pub fn component(tokens: TokenStream) -> TokenStream {
-    let component = match syn::parse::<Component>(tokens) {
+    let mut parsed = match syn::parse::<FullyDescribed>(tokens) {
         Ok(component) => component,
         Err(e) => return e.to_compile_error().into(),
     };
-    let tokens: proc_macro2::TokenStream = component.to_token_stream();
+
+    match parsed.resolve() {
+        Ok(_) => (),
+        Err(e) => return e.to_compile_error().into(),
+    }
+
+    let tokens: proc_macro2::TokenStream = parsed.to_token_stream();
     tokens.into()
 }
 
 #[proc_macro]
-pub fn component_from_defaults(tokens: TokenStream) -> TokenStream {
-  tokens
+pub fn component_from_path(tokens: TokenStream) -> TokenStream {
+  let mut parsed = match syn::parse::<PathDescribed>(tokens) {
+    Ok(component) => component,
+    Err(e) => return e.to_compile_error().into(),
+  };
+
+  match parsed.resolve() {
+    Ok(_) => (),
+    Err(e) => return e.to_compile_error().into(),
+  }
+
+  let tokens: proc_macro2::TokenStream = parsed.to_token_stream();
+  tokens.into()
 }
 
-#[derive(Debug, PartialEq)]
-struct Component {
-    name: Ident,
-    library_list: Vec<Ident>,
-    impl_map: HashMap<String, Library>,
-    default_map: Option<DefaultMap>,
+#[proc_macro]
+pub fn component_from_env(tokens: TokenStream) -> TokenStream {
+  let mut parsed = match syn::parse::<EnvDescribed>(tokens) {
+    Ok(component) => component,
+    Err(e) => return e.to_compile_error().into(),
+  };
+
+  match parsed.resolve() {
+    Ok(_) => (),
+    Err(e) => return e.to_compile_error().into(),
+  }
+
+  let tokens: proc_macro2::TokenStream = parsed.to_token_stream();
+  tokens.into()
 }
 
-impl Component {
+/// Parses tokens provided, expecting a Component to be the first token(s),
+/// followed by additional data parsed by the generic type E.
+struct TokenParser<E>
+where
+  E: syn::parse::Parse + Into<HashMap<String, Library>>,
+{
+  pub component: Component,
+  pub impl_map: HashMap<String, Library>,
+  _e: std::marker::PhantomData<E>,
+}
 
+impl <E> TokenParser<E>
+where
+  E: syn::parse::Parse + Into<HashMap<String, Library>>,
+{
   fn resolve(&mut self) -> syn::Result<()> {
-
-    // Merge the default map into the impl map, with priority given to the impl map
-    if let Some(defaults) = self.default_map.take() {
-      for (key, value) in defaults.0 {
-        self.impl_map.entry(key).or_insert(value);
-      }
-    }
-
     while !self.impl_map.values().all(|lib| lib.is_resolved()) {
       let temp_map = self.impl_map.clone();
   
@@ -62,6 +93,42 @@ impl Component {
   }
 }
 
+impl <E> syn::parse::Parse for TokenParser<E>
+where
+  E: syn::parse::Parse + Into<HashMap<String, Library>>,
+{
+  fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+    let component = input.parse::<Component>()?;
+    let impl_map = input.parse::<E>()?.into();
+    Ok(TokenParser { component, impl_map, _e: std::marker::PhantomData })
+  }
+}
+
+impl <E> quote::ToTokens for TokenParser<E>
+where
+  E: syn::parse::Parse + Into<HashMap<String, Library>>,
+{
+  fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+    let name = &self.component.name;
+
+    let mut library_list = vec![];
+    for library in &self.component.library_list {
+      let lib = self.impl_map.get(&library.to_string()).unwrap();
+      library_list.push(lib);
+    }
+
+    tokens.extend(quote! {
+      #name<#(#library_list),*>
+    });
+  }
+}
+
+#[derive(Debug, PartialEq)]
+struct Component {
+    name: Ident,
+    library_list: Vec<Ident>,
+}
+
 impl syn::parse::Parse for Component {
   fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
       let name: syn::Ident = input.parse()?;
@@ -73,75 +140,13 @@ impl syn::parse::Parse for Component {
       input.parse::<Token![>]>()?;
       input.parse::<Token![;]>()?;
       
-      let default_map = if input.peek(kw::config) || input.peek(kw::Config) {
-        Some(DefaultMap::parse(input)?)
-      } else {
-        None
-      };
-
-      let impl_map = input.parse_terminated(Library::parse, Token![;])?;
-      let impl_map: HashMap<String, Library> = impl_map
-        .into_iter()
-        .map(|lib| (lib.name.to_string(), lib))
-        .collect();
-
-      let mut component = Component {
+      Ok(Component {
           name,
           library_list,
-          impl_map,
-          default_map
-      };
-      component.resolve()?;
-      Ok(component)
+      })
   }
 }
 
-impl quote::ToTokens for Component {
-  fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-    let name = &self.name;
-
-    let mut library_list = vec![];
-    for library in &self.library_list {
-      let lib = self.impl_map.get(&library.to_string()).unwrap();
-      library_list.push(lib);
-    }
-
-    tokens.extend(quote! {
-      #name<#(#library_list),*>
-    });
-  }
-}
-
-#[derive(Debug, Default, PartialEq)]
-struct DefaultMap(HashMap<String, Library>);
-
-impl DefaultMap {
-  fn from_str(path: &str) -> Self {
-    let mut map = HashMap::new();
-    let toml_content = std::fs::read_to_string(path).unwrap();
-    let table: Table = toml::from_str(&toml_content).unwrap();
-    if let Some(library_table) = table.get("libraries"){ 
-      if let Some(libraries) = library_table.as_table() {
-        for (key, value) in libraries {
-          let value = value.as_str().unwrap();
-          let lib = syn::parse_str::<Library>(&format!("{}={}", key, value)).unwrap();
-          map.insert(key.to_string(), lib);
-        }
-      }
-    }
-    DefaultMap{0: map}
-  }
-}
-
-impl syn::parse::Parse for DefaultMap {
-  fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-    input.parse::<Ident>()?;
-    input.parse::<Token![=]>()?;
-    let path = input.parse::<syn::LitStr>()?;
-    input.parse::<Token![;]>()?;
-    Ok(DefaultMap::from_str(&path.value()))
-  }
-}
 #[derive(Clone)]
 struct Library {
   name: Ident,
@@ -373,7 +378,8 @@ mod tests {
       MyDriver<DebugLib>; DebugLib=DebugLibBase
     };
 
-    let parsed = syn::parse2::<Component>(input).unwrap();
+    let mut parsed = syn::parse2::<FullyDescribed>(input).unwrap();
+    parsed.resolve().unwrap();
     let parsed = parsed.to_token_stream();
     assert_eq!(parsed.to_string(), expected.to_string());
   }
@@ -390,7 +396,8 @@ mod tests {
       PrintLib=PrintLibBase;
     };
 
-    let parsed = syn::parse2::<Component>(input).unwrap();
+    let mut parsed = syn::parse2::<FullyDescribed>(input).unwrap();
+    parsed.resolve().unwrap();
     let parsed = parsed.to_token_stream();
     assert_eq!(parsed.to_string(), expected_output.to_string());
   }
@@ -408,7 +415,8 @@ mod tests {
       PrintLib=PrintLibBase;
     };
   
-    let parsed = syn::parse2::<Component>(input).unwrap();
+    let mut parsed = syn::parse2::<FullyDescribed>(input).unwrap();
+    parsed.resolve().unwrap();
     let parsed = parsed.to_token_stream();
     assert_eq!(parsed.to_string(), expected_output.to_string());
   }
@@ -418,7 +426,7 @@ mod tests {
     let expected_output = quote! {
       MyDriver < DebugLibBase < PrintLibBase >, AdvLibBase < PrintLibBase, WriteLibBase > >
     };
-    //
+
     let input = quote! {
       MyDriver<DebugLib, AdvLib>;
       DebugLib=DebugLibBase<PrintLib>;
@@ -427,14 +435,14 @@ mod tests {
       WriteLib=WriteLibBase;
     };
 
-    let parsed = syn::parse2::<Component>(input).unwrap();
+    let mut parsed = syn::parse2::<FullyDescribed>(input).unwrap();
+    parsed.resolve().unwrap();
     let parsed = parsed.to_token_stream();
     assert_eq!(parsed.to_string(), expected_output.to_string());
   }
 
   #[test]
-  /// Test that Priority is given to the values specified in the macro,
-  /// rather than the config file
+  /// Test that the config file can be used.
   fn test_full_parse5() {
     let expected_output = quote! {
       MyDriver < DebugLibBase < PrintLibBase >, AdvLibBase < PrintLibBase, WriteLibSpecial > >
@@ -442,61 +450,18 @@ mod tests {
 
     let input = quote! {
       MyDriver<DebugLib, AdvLib>;
-      Config = "tests/data/test_config.toml";
-      DebugLib=DebugLibBase<PrintLib>;
-      AdvLib=AdvLibBase<PrintLib, WriteLib>;
-      PrintLib=PrintLibBase;
+      Path = "tests/data/test_config.toml";
     };
 
-    let parsed = syn::parse2::<Component>(input).unwrap();
+    let mut parsed = syn::parse2::<PathDescribed>(input).unwrap();
+    parsed.resolve().unwrap();
     let parsed = parsed.to_token_stream();
     assert_eq!(parsed.to_string(), expected_output.to_string());
   }
 
-  #[test]
-  /// Test that Priority is given to the values specified in the macro,
-  /// rather than the config file
-  fn test_full_parse6() {
-    let expected_output = quote! {
-      MyDriver < DebugLibBase < PrintLibBase >, AdvLibBase < PrintLibBase, WriteLibBase > >
-    };
-
-    let input = quote! {
-      MyDriver<DebugLib, AdvLib>;
-      Config = "tests/data/test_config.toml";
-      DebugLib=DebugLibBase<PrintLib>;
-      AdvLib=AdvLibBase<PrintLib, WriteLib>;
-      PrintLib=PrintLibBase;
-      WriteLib=WriteLibBase;
-    };
-
-    let parsed = syn::parse2::<Component>(input).unwrap();
-    let parsed = parsed.to_token_stream();
-    assert_eq!(parsed.to_string(), expected_output.to_string());
-  }
-
-  #[test]
-  /// Test that the config file parser correctly reads the config file
-  /// when the value also has a required library
-  fn test_full_parse7() {
-    let expected_output = quote! {
-      MyDriver < DebugLibSpecial, AdvLibSpecial < WriteLibSpecial, DebugLibSpecial > >
-    };
-
-    let input = quote! {
-      MyDriver<DebugLib, AdvLib>;
-      Config = "tests/data/test_config.toml";
-    };
-
-    let parsed = syn::parse2::<Component>(input).unwrap();
-    let parsed = parsed.to_token_stream();
-    assert_eq!(parsed.to_string(), expected_output.to_string());
-  }
-
-  
   #[test]
   /// Test that the config file parser can properly handle include paths
-  fn test_full_parse8() {
+  fn test_full_parse6() {
     let expected_output = quote! {
       MyDriver < pk1::library::DebugLibBase, pk1::library::AdvLibSpecial < pk2::library::WriteLibBase, pk1::library::DebugLibBase > >
     };
@@ -508,7 +473,8 @@ mod tests {
       WriteLib=pk2::library::WriteLibBase; 
     };
 
-    let parsed = syn::parse2::<Component>(input).unwrap();
+    let mut parsed = syn::parse2::<FullyDescribed>(input).unwrap();
+    parsed.resolve().unwrap();
     let parsed = parsed.to_token_stream();
     assert_eq!(parsed.to_string(), expected_output.to_string());
   }

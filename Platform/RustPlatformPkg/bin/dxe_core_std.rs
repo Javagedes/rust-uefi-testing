@@ -1,7 +1,7 @@
 extern crate alloc;
 use pkg1::component::DxeCoreComponent;
 
-use uefi_core::{component, Component};
+use mu_core::{component, Component};
 
 type Driver = component!(
     DxeCoreComponent<DebugLib, CpuInterrupt>;
@@ -9,6 +9,6 @@ type Driver = component!(
     CpuInterrupt=pkg1::library::CpuInterruptStd;
 );
 
-fn main() -> uefi_core::error::Result<()> {
+fn main() -> mu_core::error::Result<()> {
     Driver::entry_point(std::ptr::null_mut(), std::ptr::null_mut())
 }
