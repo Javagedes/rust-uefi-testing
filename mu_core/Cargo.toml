@@ -1,5 +1,5 @@
 [package]
-name = "uefi_core"
+name = "mu_core"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 RustBootServicesAllocatorDxe = { workspace = true }
 r-efi = { workspace = true }
-uefi_macro = { workspace = true }
+mu_macro = { workspace = true }
 
 [features]
 default = []

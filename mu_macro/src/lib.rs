@@ -22,6 +22,11 @@ pub fn component(tokens: TokenStream) -> TokenStream {
     tokens.into()
 }
 
+#[proc_macro]
+pub fn component_from_defaults(tokens: TokenStream) -> TokenStream {
+  tokens
+}
+
 #[derive(Debug, PartialEq)]
 struct Component {
     name: Ident,

@@ -2,7 +2,7 @@ use core::marker::PhantomData;
 use log::info;
 use r_efi::efi;
 
-use uefi_core::{Component, error::Result};
+use mu_core::{Component, error::Result};
 use crate::interface::DebugLib;
 
 pub struct HelloWorldComponent<D>

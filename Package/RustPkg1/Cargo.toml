@@ -10,7 +10,7 @@ path = "src/lib.rs"
 
 [dependencies]
 r-efi = { workspace = true }
-uefi_core = { workspace = true }
+mu_core = { workspace = true }
 log = { workspace = true }
 lazy_static = { workspace = true }
 spin = { workspace = true }
@@ -19,4 +19,4 @@ x86_64 = { workspace = true }
 
 [features]
 default = []
-std = ["uefi_core/std"]
+std = ["mu_core/std"]

@@ -43,10 +43,10 @@ required-features = ["std"]
 r-efi = { workspace = true}
 RustPkg1 = { workspace = true }
 RustPkg2 = { workspace = true}
-uefi_core = { workspace = true }
+mu_core = { workspace = true }
 RustBootServicesAllocatorDxe = { workspace = true }
 
 [features]
 default = []
-std = ["uefi_core/std", "RustPkg1/std", "RustPkg2/std"]
+std = ["mu_core/std", "RustPkg1/std", "RustPkg2/std"]
 uefi = [] # Used for filtering on what binaries are built, that is it

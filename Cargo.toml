@@ -7,8 +7,9 @@ members = [
 ]
 
 [workspace.dependencies]
-uefi_core = { path = "uefi_core" }
-uefi_macro = { path = "uefi_macro" }
+mu_core = { path = "mu_core" }
+mu_macro = { path = "mu_macro" }
+mu_config = { path = 'mu_config'}
 RustPkg1 = { path = "Package/RustPkg1" }
 RustPkg2 = { path = "Package/RustPkg2" }
 
