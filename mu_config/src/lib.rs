@@ -28,7 +28,7 @@ pub struct Instance {
 /// A lookup dictionary of library instances based off the library name and architecture.
 #[derive(Debug, Serialize, Default)]
 pub struct LibraryInstances {
-  instances: HashMap<LibraryKey, Instance>,
+  pub instances: HashMap<LibraryKey, Instance>,
 }
 
 impl LibraryInstances {
@@ -130,10 +130,10 @@ fn process_library_table(table: &Table) -> Result<LibraryInstances, ()>
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Serialize)]
-struct LibraryKey {
-    name: String,
-    arch: Architecture,
-    module: Module,
+pub struct LibraryKey {
+    pub name: String,
+    pub arch: Architecture,
+    pub module: Module,
 }
 
 #[cfg(test)]

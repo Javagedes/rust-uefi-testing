@@ -1,6 +1,6 @@
 use std::collections::HashMap;
+use mu_config::Architecture;
 use syn::{Ident, Token};
-use toml::Table;
 
 use super::Library;
 
@@ -53,11 +53,11 @@ impl syn::parse::Parse for FromPath {
     )?;
     let config: mu_config::Config = toml::from_str(&toml_content).unwrap();
     
-    for ((name, arch), instance) in config.libraries.instances {
+    for (key, instance) in config.libraries.instances {
       // TODO, Find the specified architecture for the component
-      if arch == "common" {
-        let lib = syn::parse_str::<Library>(&format!("{}={}", name, instance.path)).unwrap();
-        map.insert(name, lib);
+      if key.arch == Architecture::Common {
+        let lib = syn::parse_str::<Library>(&format!("{}={}", key.name, instance.path)).unwrap();
+        map.insert(key.name, lib);
       }
     }
     Ok(FromPath(map))
@@ -91,11 +91,11 @@ impl syn::parse::Parse for FromEnv {
         |e| syn::Error::new(env.span(), e)
     )?;
     let config: mu_config::Config = toml::from_str(&toml_content).unwrap();
-    for ((name, arch), instance) in config.libraries.instances {
+    for (key, instance) in config.libraries.instances {
       // TODO, Find the specified architecture for the component
-      if arch == "common" {
-        let lib = syn::parse_str::<Library>(&format!("{}={}", name, instance.path)).unwrap();
-        map.insert(name, lib);
+      if key.arch == Architecture::Common {
+        let lib = syn::parse_str::<Library>(&format!("{}={}", key.name, instance.path)).unwrap();
+        map.insert(key.name, lib);
       }
     }
     Ok(FromEnv(map))

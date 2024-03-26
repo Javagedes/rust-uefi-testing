@@ -7,7 +7,7 @@ use r_efi::efi;
 
 use pkg1::component::HelloWorldComponent;
 
-use uefi_core::{Component, component};
+use mu_core::{Component, component};
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {

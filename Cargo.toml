@@ -6,6 +6,10 @@ members = [
     "Platform/RustPlatformPkg",
 ]
 
+default-members = [
+    "Platform/RustPlatformPkg",
+]
+
 [workspace.dependencies]
 mu_core = { path = "mu_core" }
 mu_macro = { path = "mu_macro" }
