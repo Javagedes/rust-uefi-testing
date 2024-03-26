@@ -1,8 +1,13 @@
-[libraryinstances]
+[[libraryinstances]]
 AdvLib="pkg1::library::AdvLibBase"
 
-[libraryinstances.x64]
-AdvLib="pkg1::library::AdvLibx64"
+[[libraryinstances]]
+arch = ["X64"]
+AdvLib="pkg1::library::AdvLibX64"
 
-[libraryinstances.x64.dxe_driver]
-AdvLib="pkg1::library::AdvLibdxe_opt"
+[[libraryinstances]]
+arch = ["x64"]
+module = ["DXE_DRIVER"]
+AdvLib="pkg1::library::AdvLibDxeOpt"
+
+[[components]]
