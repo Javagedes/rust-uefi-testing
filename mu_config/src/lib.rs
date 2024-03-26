@@ -12,15 +12,23 @@ pub use types::{Architecture, Module};
 /// build configurations.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
-  /// A lookup dictionary of library instances
-  #[serde(alias = "libraryinstances", alias="LibraryInstances")]
-  pub libraries: LibraryInstances,
+    /// A lookup dictionary of library instances
+    #[serde(alias = "libraryinstances", alias="LibraryInstances")]
+    pub libraries: LibraryInstances,
+    #[serde(alias = "components", alias="Components")]
+    pub components: ComponentInstances,
+}
 
+#[derive(Debug, PartialEq, Eq, Hash, Serialize)]
+pub struct LibraryKey {
+    pub name: String,
+    pub arch: Architecture,
+    pub module: Module,
 }
 
 /// The actual library instance that is being used.
 #[derive(Debug, Serialize, Clone)]
-pub struct Instance {
+pub struct LibraryInstance {
     pub name: String,
     pub path: String,
 }
@@ -28,7 +36,7 @@ pub struct Instance {
 /// A lookup dictionary of library instances based off the library name and architecture.
 #[derive(Debug, Serialize, Default)]
 pub struct LibraryInstances {
-  pub instances: HashMap<LibraryKey, Instance>,
+  pub instances: HashMap<LibraryKey, LibraryInstance>,
 }
 
 impl LibraryInstances {
@@ -36,7 +44,7 @@ impl LibraryInstances {
         self.instances.extend(other.instances);
     }
 
-    pub fn get(&self, name: &str, arch: Architecture, module: Module) -> Option<Instance> {
+    pub fn get(&self, name: &str, arch: Architecture, module: Module) -> Option<LibraryInstance> {
         let search_order = [
             LibraryKey { name: name.to_lowercase(), arch: arch.clone(), module: module.clone() },
             LibraryKey { name: name.to_lowercase(), arch: arch.clone(), module: Module::Common },
@@ -66,7 +74,44 @@ impl<'de> Deserialize<'de> for LibraryInstances {
                 instances.merge(process_library_table(table).unwrap());
             }
         }
-        println!("{:?}", instances.instances);
+        Ok(instances)
+    }
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct ComponentInstance {
+    pub arch: Architecture,
+    pub module: Module,
+}
+
+/// A lookup dictionary of library instances based off the library name and architecture.
+#[derive(Debug, Serialize, Default)]
+pub struct ComponentInstances {
+  pub instances: HashMap<String, ComponentInstance>,
+}
+
+impl ComponentInstances {
+    fn merge(&mut self, other: ComponentInstances) {
+        self.instances.extend(other.instances);
+    }
+    fn get(&self, name: &str) -> Option<ComponentInstance> {
+        self.instances.get(&name.to_lowercase()).cloned()
+    }
+}
+
+impl<'de> Deserialize<'de> for ComponentInstances {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut instances = ComponentInstances::default();
+
+        if let Some(arr) = Value::deserialize(deserializer)?.as_array() {
+            for table in arr {
+                let table = table.as_table().unwrap();
+                instances.merge(process_component_table(table).unwrap());
+            }
+        }
         Ok(instances)
     }
 }
@@ -109,7 +154,7 @@ fn process_library_table(table: &Table) -> Result<LibraryInstances, ()>
         module_list.push(Module::Common);
     }
 
-    let mut instances: HashMap<LibraryKey, Instance> = HashMap::new();
+    let mut instances: HashMap<LibraryKey, LibraryInstance> = HashMap::new();
     for arch in &arch_list {
         for module in &module_list {
             for (name, path) in library_list.iter() {
@@ -118,7 +163,7 @@ fn process_library_table(table: &Table) -> Result<LibraryInstances, ()>
                     arch: arch.clone(),
                     module: module.clone(),
                 };
-                instances.insert(key, Instance {
+                instances.insert(key, LibraryInstance {
                     name: name.to_lowercase(),
                     path: path.to_string(),
                 });
@@ -129,12 +174,39 @@ fn process_library_table(table: &Table) -> Result<LibraryInstances, ()>
     Ok(LibraryInstances { instances})
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Serialize)]
-pub struct LibraryKey {
-    pub name: String,
-    pub arch: Architecture,
-    pub module: Module,
+fn process_component_table(table: &Table) -> Result<ComponentInstances, ()>
+{
+    let mut arch = Architecture::Common;
+    let mut module = Module::Common;
+    let mut component_list = vec![];
+
+    for (name, value) in table.iter() {
+        if name.to_lowercase() == "arch" {
+            arch = value.try_into().unwrap();
+        }
+        else if name.to_lowercase() == "module" {
+            module = value.try_into().unwrap();
+        }
+        else {
+            component_list.push(name);
+        }
+    }
+    
+    let instances = component_list.iter()
+    .map(|name| {
+        (
+            name.to_lowercase(),
+            ComponentInstance {
+                arch: arch.clone(),
+                module: module.clone(),
+            }
+        )}
+    )
+    .collect();
+
+    Ok(ComponentInstances{instances})
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -158,6 +230,16 @@ mod tests {
         assert_eq!(
             config.libraries.get("AdvLib", Architecture::X64, Module::DxeDriver).unwrap().path,
             "pkg1::library::AdvLibDxeOpt"
+        );
+
+        assert_eq!(
+            config.components.get("MyDriver").unwrap().arch,
+            Architecture::X64
+        );
+
+        assert_eq!(
+            config.components.get("MyDriver").unwrap().module,
+            Module::DxeDriver
         );
     }
 }

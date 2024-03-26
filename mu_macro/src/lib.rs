@@ -77,6 +77,7 @@ where
   E: syn::parse::Parse + Into<HashMap<String, Library>>,
 {
   fn resolve(&mut self) -> syn::Result<()> {
+    println!("{:?}", self.impl_map);
     while !self.impl_map.values().all(|lib| lib.is_resolved()) {
       let temp_map = self.impl_map.clone();
   
@@ -113,7 +114,8 @@ where
 
     let mut library_list = vec![];
     for library in &self.component.library_list {
-      let lib = self.impl_map.get(&library.to_string()).unwrap();
+      println!("GetrLib: {}", library.to_string().to_lowercase());
+      let lib = self.impl_map.get(&library.to_string().to_lowercase()).unwrap();
       library_list.push(lib);
     }
 
@@ -167,7 +169,7 @@ impl Library {
   /// Attempts to resolve the required libraries for this Library
   fn resolve(&mut self, impl_map: &HashMap<String, Library>) -> syn::Result<()> {
     for required in &self.required {
-      if let Some(lib) = impl_map.get(&required.to_string()) {
+      if let Some(lib) = impl_map.get(&required.to_string().to_lowercase()) {
         if lib.is_resolved() {
           self.resolved.push(lib.clone());
         }

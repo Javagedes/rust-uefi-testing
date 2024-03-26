@@ -11,3 +11,7 @@ module = ["DXE_DRIVER"]
 AdvLib="pkg1::library::AdvLibDxeOpt"
 
 [[components]]
+arch = "X64"
+module = "DXE_DRIVER"
+MyDriver = {}
+MyDriver2 = {}

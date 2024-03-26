@@ -19,7 +19,7 @@ impl syn::parse::Parse for FromMacro {
     let impl_map = input.parse_terminated(Library::parse, Token![;])?;
       let impl_map: HashMap<String, Library> = impl_map
         .into_iter()
-        .map(|lib| (lib.name.to_string(), lib))
+        .map(|lib| (lib.name.to_string().to_lowercase(), lib))
         .collect();
     Ok(FromMacro(impl_map))
   }

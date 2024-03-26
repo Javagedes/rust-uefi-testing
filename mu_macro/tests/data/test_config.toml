@@ -1,5 +1,7 @@
-[libraries]
+[[libraries]]
 AdvLib="AdvLibBase<PrintLib, WriteLib>"
 WriteLib="WriteLibSpecial"
 DebugLib="DebugLibBase<PrintLib>"
 PrintLib="PrintLibBase"
+
+[[components]]
