@@ -7,6 +7,7 @@ Read Everything below already? If not, read the below first. This is just better
 - `cargo build-std` Builds all crates with the std feature, including any std binary drivers.
 - `cargo build-uefi` Builds all crates with the uefi feature, including any uefi drivers.
 - `run-std` Runs the specified binary
+- `test-mu` Runs all unit tests for mu_config and mu_macro
 
 **Note**: You can / should add `--bin <bin_name>` to build or run only a single std driver.
 
