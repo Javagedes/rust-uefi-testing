@@ -1,0 +1,8 @@
+[[libraries]]
+DebugLib = "pk1::library::DebugLibBase"
+PrintLib = "PrintLibBase"
+AdvLib = "pk1::library::AdvLibSpecial < WriteLib, DebugLib >"
+WriteLib="pk2::library::WriteLibBase"
+
+[[components]]
+MyDriver = {}

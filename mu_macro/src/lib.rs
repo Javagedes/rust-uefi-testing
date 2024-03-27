@@ -1,131 +1,25 @@
 extern crate proc_macro;
 
-use std::collections::HashMap;
+mod from_macro;
+mod from_path;
 
+use std::collections::HashMap;
 
 use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
 use syn::{punctuated::Punctuated, token::Comma, Ident, Token};
 
-mod map;
-
-type FullyDescribed = TokenParser<map::FromMacro>;
-type PathDescribed = TokenParser<map::FromPath>;
-type EnvDescribed = TokenParser<map::FromEnv>;
-
 #[proc_macro]
 pub fn component(tokens: TokenStream) -> TokenStream {
-    let mut parsed = match syn::parse::<FullyDescribed>(tokens) {
-        Ok(component) => component,
-        Err(e) => return e.to_compile_error().into(),
-    };
-
-    match parsed.resolve() {
-        Ok(_) => (),
-        Err(e) => return e.to_compile_error().into(),
-    }
-
-    let tokens: proc_macro2::TokenStream = parsed.to_token_stream();
-    tokens.into()
+    from_macro::parse(tokens.into()).into()
 }
 
 #[proc_macro]
 pub fn component_from_path(tokens: TokenStream) -> TokenStream {
-  let mut parsed = match syn::parse::<PathDescribed>(tokens) {
-    Ok(component) => component,
-    Err(e) => return e.to_compile_error().into(),
-  };
-
-  match parsed.resolve() {
-    Ok(_) => (),
-    Err(e) => return e.to_compile_error().into(),
-  }
-
-  let tokens: proc_macro2::TokenStream = parsed.to_token_stream();
-  tokens.into()
+  from_path::parse(tokens.into()).into()
 }
 
-#[proc_macro]
-pub fn component_from_env(tokens: TokenStream) -> TokenStream {
-  let mut parsed = match syn::parse::<EnvDescribed>(tokens) {
-    Ok(component) => component,
-    Err(e) => return e.to_compile_error().into(),
-  };
-
-  match parsed.resolve() {
-    Ok(_) => (),
-    Err(e) => return e.to_compile_error().into(),
-  }
-
-  let tokens: proc_macro2::TokenStream = parsed.to_token_stream();
-  tokens.into()
-}
-
-/// Parses tokens provided, expecting a Component to be the first token(s),
-/// followed by additional data parsed by the generic type E.
-struct TokenParser<E>
-where
-  E: syn::parse::Parse + Into<HashMap<String, Library>>,
-{
-  pub component: Component,
-  pub impl_map: HashMap<String, Library>,
-  _e: std::marker::PhantomData<E>,
-}
-
-impl <E> TokenParser<E>
-where
-  E: syn::parse::Parse + Into<HashMap<String, Library>>,
-{
-  fn resolve(&mut self) -> syn::Result<()> {
-    println!("{:?}", self.impl_map);
-    while !self.impl_map.values().all(|lib| lib.is_resolved()) {
-      let temp_map = self.impl_map.clone();
-  
-      for lib in self.impl_map.values_mut() {
-        lib.resolve(&temp_map).unwrap();
-      }
-
-      // If the map hasn't changed, we have a circular dependency
-      if temp_map == self.impl_map {
-        panic!("Circular dependency detected");
-      }
-    }
-    Ok(())
-  }
-}
-
-impl <E> syn::parse::Parse for TokenParser<E>
-where
-  E: syn::parse::Parse + Into<HashMap<String, Library>>,
-{
-  fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-    let component = input.parse::<Component>()?;
-    let impl_map = input.parse::<E>()?.into();
-    Ok(TokenParser { component, impl_map, _e: std::marker::PhantomData })
-  }
-}
-
-impl <E> quote::ToTokens for TokenParser<E>
-where
-  E: syn::parse::Parse + Into<HashMap<String, Library>>,
-{
-  fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-    let name = &self.component.name;
-
-    let mut library_list = vec![];
-    for library in &self.component.library_list {
-      println!("GetrLib: {}", library.to_string().to_lowercase());
-      let lib = self.impl_map.get(&library.to_string().to_lowercase()).unwrap();
-      library_list.push(lib);
-    }
-
-    tokens.extend(quote! {
-      #name<#(#library_list),*>
-    });
-  }
-}
-
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 struct Component {
     name: Ident,
     library_list: Vec<Ident>,
@@ -368,116 +262,5 @@ mod tests {
     ];
     let parsed: proc_macro2::TokenStream = parsed.to_token_stream();
     assert_eq!(parsed.to_string(), expected.to_string());
-  }
-
-  #[test]
-  fn test_full_parse1() {
-    let expected = quote! {
-      MyDriver<DebugLibBase>
-    };
-
-    let input = quote! {
-      MyDriver<DebugLib>; DebugLib=DebugLibBase
-    };
-
-    let mut parsed = syn::parse2::<FullyDescribed>(input).unwrap();
-    parsed.resolve().unwrap();
-    let parsed = parsed.to_token_stream();
-    assert_eq!(parsed.to_string(), expected.to_string());
-  }
-
-  #[test]
-  fn test_full_parse2() {
-    let expected_output = quote! {
-      MyDriver < DebugLibBase < PrintLibBase > >
-    };
-
-    let input = quote! {
-      MyDriver<DebugLib>;
-      DebugLib=DebugLibBase<PrintLib>;
-      PrintLib=PrintLibBase;
-    };
-
-    let mut parsed = syn::parse2::<FullyDescribed>(input).unwrap();
-    parsed.resolve().unwrap();
-    let parsed = parsed.to_token_stream();
-    assert_eq!(parsed.to_string(), expected_output.to_string());
-  }
-
-  #[test]
-  fn test_full_parse3() {
-    let expected_output = quote! {
-      MyDriver < DebugLibBase < PrintLibBase >, AdvLibBase < PrintLibBase> >
-    };
-
-    let input = quote! {
-      MyDriver<DebugLib, AdvLib>;
-      DebugLib=DebugLibBase<PrintLib>;
-      AdvLib=AdvLibBase<PrintLib>;
-      PrintLib=PrintLibBase;
-    };
-  
-    let mut parsed = syn::parse2::<FullyDescribed>(input).unwrap();
-    parsed.resolve().unwrap();
-    let parsed = parsed.to_token_stream();
-    assert_eq!(parsed.to_string(), expected_output.to_string());
-  }
-
-  #[test]
-  fn test_full_parse4() {
-    let expected_output = quote! {
-      MyDriver < DebugLibBase < PrintLibBase >, AdvLibBase < PrintLibBase, WriteLibBase > >
-    };
-
-    let input = quote! {
-      MyDriver<DebugLib, AdvLib>;
-      DebugLib=DebugLibBase<PrintLib>;
-      AdvLib=AdvLibBase<PrintLib, WriteLib>;
-      PrintLib=PrintLibBase;
-      WriteLib=WriteLibBase;
-    };
-
-    let mut parsed = syn::parse2::<FullyDescribed>(input).unwrap();
-    parsed.resolve().unwrap();
-    let parsed = parsed.to_token_stream();
-    assert_eq!(parsed.to_string(), expected_output.to_string());
-  }
-
-  #[test]
-  /// Test that the config file can be used.
-  fn test_full_parse5() {
-    let expected_output = quote! {
-      MyDriver < DebugLibBase < PrintLibBase >, AdvLibBase < PrintLibBase, WriteLibSpecial > >
-    };
-
-    let input = quote! {
-      MyDriver<DebugLib, AdvLib>;
-      Path = "tests/data/test_config.toml";
-    };
-
-    let mut parsed = syn::parse2::<PathDescribed>(input).unwrap();
-    parsed.resolve().unwrap();
-    let parsed = parsed.to_token_stream();
-    assert_eq!(parsed.to_string(), expected_output.to_string());
-  }
-
-  #[test]
-  /// Test that the config file parser can properly handle include paths
-  fn test_full_parse6() {
-    let expected_output = quote! {
-      MyDriver < pk1::library::DebugLibBase, pk1::library::AdvLibSpecial < pk2::library::WriteLibBase, pk1::library::DebugLibBase > >
-    };
-
-    let input = quote! {
-      MyDriver<DebugLib, AdvLib>;
-      DebugLib=pk1::library::DebugLibBase;
-      AdvLib=pk1::library::AdvLibSpecial < WriteLib, DebugLib >;
-      WriteLib=pk2::library::WriteLibBase; 
-    };
-
-    let mut parsed = syn::parse2::<FullyDescribed>(input).unwrap();
-    parsed.resolve().unwrap();
-    let parsed = parsed.to_token_stream();
-    assert_eq!(parsed.to_string(), expected_output.to_string());
   }
 }

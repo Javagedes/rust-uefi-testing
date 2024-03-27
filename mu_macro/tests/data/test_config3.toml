@@ -1,0 +1,8 @@
+[[libraries]]
+DebugLib = "DebugLibBase<PrintLib>"
+PrintLib = "PrintLibBase"
+AdvLib = "AdvLibBase<PrintLib, WriteLib>"
+WriteLib="WriteLibBase"
+
+[[components]]
+MyDriver = {}

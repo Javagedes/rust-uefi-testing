@@ -5,3 +5,4 @@ git-fetch-with-cli = true
 build-std = "build -p RustPlatformPkg --features std --target x86_64-pc-windows-msvc"
 build-uefi = "build -p RustPlatformPkg --features uefi --target x86_64-unknown-uefi -Zbuild-std=core,compiler_builtins,alloc -Zbuild-std-features=compiler-builtins-mem"
 run-std = "run --features std"
+test-mu = "test -p mu_config -p mu_macro"

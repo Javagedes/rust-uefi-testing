@@ -6,7 +6,7 @@ use mu_core::{component, Component};
 type Driver = component!(
     DxeCoreComponent<DebugLib, CpuInterrupt>;
     DebugLib=pkg1::library::DebugLibStd;
-    CpuInterrupt=pkg1::library::CpuInterruptStd;
+    CpuInterrupt=pkg1::library::CpuInterruptLibStd;
 );
 
 fn main() -> mu_core::error::Result<()> {

@@ -5,6 +5,6 @@ pub trait DebugLib {
     fn init(image_handle: Handle, system_table: *mut SystemTable);
 }
 
-pub trait CpuInterrupt {
+pub trait CpuInterruptLib {
     fn init();
 }

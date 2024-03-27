@@ -9,6 +9,7 @@ AdvLib="pkg1::library::AdvLibX64"
 arch = ["x64"]
 module = ["DXE_DRIVER"]
 AdvLib="pkg1::library::AdvLibDxeOpt"
+TestLib="pkg1::library::TestLibDxeOpt<AdvLib>"
 
 [[components]]
 arch = "X64"

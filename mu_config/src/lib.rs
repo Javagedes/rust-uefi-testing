@@ -10,7 +10,7 @@ pub use types::{Architecture, Module};
 
 /// A Serializavle/Deserializable toml file for platform
 /// build configurations.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Config {
     /// A lookup dictionary of library instances
     #[serde(alias = "libraryinstances", alias="LibraryInstances")]
@@ -44,7 +44,7 @@ impl LibraryInstances {
         self.instances.extend(other.instances);
     }
 
-    pub fn get(&self, name: &str, arch: Architecture, module: Module) -> Option<LibraryInstance> {
+    pub fn get(&self, name: &str, arch: &Architecture, module: &Module) -> Option<LibraryInstance> {
         let search_order = [
             LibraryKey { name: name.to_lowercase(), arch: arch.clone(), module: module.clone() },
             LibraryKey { name: name.to_lowercase(), arch: arch.clone(), module: Module::Common },
@@ -94,7 +94,7 @@ impl ComponentInstances {
     fn merge(&mut self, other: ComponentInstances) {
         self.instances.extend(other.instances);
     }
-    fn get(&self, name: &str) -> Option<ComponentInstance> {
+    pub fn get(&self, name: &str) -> Option<ComponentInstance> {
         self.instances.get(&name.to_lowercase()).cloned()
     }
 }
@@ -218,18 +218,23 @@ mod tests {
         let config = toml::from_str::<Config>(data).unwrap();
 
         assert_eq!(
-            config.libraries.get("AdvLib", Architecture::Common, Module::Common).unwrap().path,
+            config.libraries.get("AdvLib", &Architecture::Common, &Module::Common).unwrap().path,
             "pkg1::library::AdvLibBase"
         );
 
         assert_eq!(
-            config.libraries.get("AdvLib", Architecture::X64, Module::Common).unwrap().path,
+            config.libraries.get("AdvLib", &Architecture::X64, &Module::Common).unwrap().path,
             "pkg1::library::AdvLibX64"
         );
 
         assert_eq!(
-            config.libraries.get("AdvLib", Architecture::X64, Module::DxeDriver).unwrap().path,
+            config.libraries.get("AdvLib", &Architecture::X64, &Module::DxeDriver).unwrap().path,
             "pkg1::library::AdvLibDxeOpt"
+        );
+
+        assert_eq!(
+            config.libraries.get("TestLib", &Architecture::X64, &Module::DxeDriver).unwrap().path,
+            "pkg1::library::TestLibDxeOpt<AdvLib>"
         );
 
         assert_eq!(

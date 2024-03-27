@@ -1,15 +1,15 @@
-use crate::interface::CpuInterrupt;
+use crate::interface::CpuInterruptLib;
 
-pub struct CpuInterruptX64;
+pub struct CpuInterruptLibX64;
 
-impl CpuInterrupt for CpuInterruptX64 {
+impl CpuInterruptLib for CpuInterruptLibX64 {
     fn init() {
         // Do nothing
     }
 }
 
-pub struct CpuInterruptStd;
-impl CpuInterrupt for CpuInterruptStd {
+pub struct CpuInterruptLibStd;
+impl CpuInterruptLib for CpuInterruptLibStd {
     fn init() {
         // Do nothing
     }
